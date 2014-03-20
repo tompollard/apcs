@@ -4,16 +4,12 @@
 # Notes: 
 # Requires PMCID for matching. So doesn't match records where PMCID is unavailable. Should probs have used PMID as key instead.
 # Attempts to find missing PMCIDs from titles, but fails
-# Should clean up types and use of nan for strings.
+# Should clean up types and remove nans for strings.
 
 import os
 import pandas as pd
-# from pylab import *
-# from scipy import *
-# import xlrd
 import numpy as np
 from bs4 import BeautifulSoup
-# from urllib2 import urlopen
 import requests
 
 # Set up connection
@@ -46,7 +42,7 @@ apcs['PMC_Citation_Count'] = ''
 apcs['Notes'] = ''
 
 # get PMCID with PMID
-# it turns out that what i thought were PMIDs are actually PMCIDs
+# what i thought were PMIDs are mostly PMCIDs
 def getpmcidwithpmid(pm_id):
 	query_url = 'http://www.pubmedcentral.nih.gov/utils/idconv/v1.0/?ids=' + pm_id
 	r = session.get(query_url)
@@ -54,14 +50,15 @@ def getpmcidwithpmid(pm_id):
 	if 'invalid article' in soup.text:
 		# try searching for the ID as PMCID
 		query_url = 'http://www.pubmedcentral.nih.gov/utils/idconv/v1.0/?ids=' + 'PMC' + pm_id
+		pm_id = np.nan # assume PMID is wrong, so clear it
 		r = session.get(query_url)
 		soup = BeautifulSoup(r.content)
 	try:
 		pmc_id = soup.record['pmcid']
 	except (AttributeError,KeyError,TypeError):
 		print('PMCID not found')
-		pmc_id = np.nan
-	return pmc_id
+		pmc_id = np.nan # PCMID is unknown
+	return [pm_id, pmc_id]
 
 # get PMCID with title
 def getpmcidwithtitle(base_url,art_title):
@@ -84,10 +81,17 @@ def getpmcidwithtitle(base_url,art_title):
 	return pmc_id
 
 # get details using the PMCID
-def getdetailswithpmcid(base_url,apcs,row,pm_cid):
+def getdetailsfrompmc(base_url,apcs,row,pmc_id,pm_id):
 	query_url = base_url + 'PMCID:' + pmc_id
 	r = session.get(query_url)
 	soup = BeautifulSoup(r.content)
+	if soup.hitcount.renderContents() == '0' and type(pm_id) is str:
+		# try the PMID instead
+		query_url = base_url + pm_id
+		r = session.get(query_url)
+		soup = BeautifulSoup(r.content)
+	else:
+		pass	
 	if soup.hitcount.renderContents() == '1':
 		try:
 			apcs.loc[row[0],'PMC_Title'] = soup.title.renderContents()
@@ -144,10 +148,10 @@ for row in apcs.loc[(apcs.PMCID.isnull() & apcs.PMID.notnull())].iterrows():
 	pm_id = row[1]['PMID']
 	pm_id = str(int(pm_id))
 	print('Attempting to match PMID: ' + pm_id)
-	pmc_id = getpmcidwithpmid(pm_id)
+	[pm_id, pmc_id] = getpmcidwithpmid(pm_id)
 	print('Matched to: ' + str(pmc_id))
 	print('\n')
-	apcs.loc[row[0],'PMID'] = np.nan # strip PMID. it'll be replaced later.
+	apcs.loc[row[0],'PMID'] = pm_id # strip PMID. it'll be replaced later.
 	apcs.loc[row[0],'PMCID'] = pmc_id
 
 # Try to get missing PMCIDs using the title (for records missing both PMCID and PMID)
@@ -164,12 +168,13 @@ for row in apcs.loc[(apcs.PMCID.isnull() & apcs.PMID.isnull())].iterrows():
 
 # Query Europe PMC using the PMCID
 print('Getting details from Europe PMC...')
-for row in apcs.loc[apcs.PMCID.notnull()].iterrows():
+for row in apcs.loc[(apcs.PMCID.notnull() | apcs.PMID.notnull())].iterrows():
 	pmc_id = row[1]['PMCID']
+	pm_id = row[1]['PMID']
 	print('Getting details for: ' + str(pmc_id))
 	# if type(pmc_id) is str and 'PMC' in pmc_id:
 	# 	print pmc_id
-	apcs = getdetailswithpmcid(base_url,apcs,row,pmc_id)
+	apcs = getdetailsfrompmc(base_url,apcs,row,pmc_id,pm_id)
 	print(apcs.loc[row[0]])
 	print('\n')
 
