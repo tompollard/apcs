@@ -2,7 +2,6 @@
 # Tom Pollard / 19 March 2014
 
 # Notes: 
-# Requires PMCID for matching. So doesn't match records where PMCID is unavailable. Should probs have used PMID as key instead.
 # Attempts to find missing PMCIDs from titles, but fails
 # Should clean up types and remove nans for strings.
 
