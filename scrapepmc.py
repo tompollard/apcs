@@ -61,11 +61,12 @@ def getpmcidwithpmid(pm_id):
 	except (AttributeError,KeyError,TypeError):
 		print('PMCID not found')
 		pmc_id = np.nan
-	return pmc_id.strip()
+	return pmc_id
 
 # get PMCID with title
 def getpmcidwithtitle(base_url,art_title):
 	art_title = art_title.replace('(','').replace(')','').replace(':','').replace('.','')
+	art_title = art_title.strip()
 	art_title = art_title.replace(' ','%20')
 	# query_url = base_url + "'" + art_title + "'"
 	query_url = base_url + art_title
@@ -80,7 +81,7 @@ def getpmcidwithtitle(base_url,art_title):
 	else:
 		print('Unable to match title to PMCID')
 		pmc_id = np.nan
-	return pmc_id.strip()
+	return pmc_id
 
 # get details using the PMCID
 def getdetailswithpmcid(base_url,apcs,row,pm_cid):
@@ -141,7 +142,7 @@ def getdetailswithpmcid(base_url,apcs,row,pm_cid):
 print('Finding PMCIDs with PMIDs...')
 for row in apcs.loc[(apcs.PMCID.isnull() & apcs.PMID.notnull())].iterrows():
 	pm_id = row[1]['PMID']
-	pm_id = str(int(pm_id)).strip()
+	pm_id = str(int(pm_id))
 	print('Attempting to match PMID: ' + pm_id)
 	pmc_id = getpmcidwithpmid(pm_id)
 	print('Matched to: ' + str(pmc_id))
@@ -153,7 +154,7 @@ for row in apcs.loc[(apcs.PMCID.isnull() & apcs.PMID.notnull())].iterrows():
 # Currently fails to find any matches...
 print('Finding PMCIDs with titles...')
 for row in apcs.loc[(apcs.PMCID.isnull() & apcs.PMID.isnull())].iterrows():
-	art_title = row[1]['Title'].strip()
+	art_title = row[1]['Title']
 	print('Attempting to match title: ' + art_title)
 	pmc_id = getpmcidwithtitle(base_url,art_title)
 	print('Matched to: ' + str(pmc_id))
@@ -164,7 +165,7 @@ for row in apcs.loc[(apcs.PMCID.isnull() & apcs.PMID.isnull())].iterrows():
 # Query Europe PMC using the PMCID
 print('Getting details from Europe PMC...')
 for row in apcs.loc[apcs.PMCID.notnull()].iterrows():
-	pmc_id = row[1]['PMCID'].strip()
+	pmc_id = row[1]['PMCID']
 	print('Getting details for: ' + str(pmc_id))
 	# if type(pmc_id) is str and 'PMC' in pmc_id:
 	# 	print pmc_id
