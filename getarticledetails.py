@@ -141,6 +141,12 @@ def getdetailsfrompmc(base_url,apcs,row,pmc_id,pm_id):
 		apcs.loc[row[0],'Notes'] = 'PMCID not found'
 	return apcs
 
+# # Get open access details from HowOpenIsIt?
+# def getdetailsfromhowopenistit(doi):
+# 	base_url = 'http://howopenisit.org/developers/api'
+# 	query_url = base_url + '/lookup' + doi
+# 	return response
+
 # Try to get missing PMCIDs using the PMID
 print('Finding PMCIDs with PMIDs...')
 for row in apcs.loc[(apcs.PMCID.isnull() & apcs.PMID.notnull())].iterrows():
@@ -176,6 +182,13 @@ for row in apcs.loc[(apcs.PMCID.notnull() | apcs.PMID.notnull())].iterrows():
 	apcs = getdetailsfrompmc(base_url,apcs,row,pmc_id,pm_id)
 	print(apcs.loc[row[0]])
 	print('\n')
+
+# # How open is it?
+# print('Getting open access details from HowOpenIsIt?...')
+# for row in apcs.loc[(apcs.PMC_DOI.notnull())].iterrows():
+# 	doi = row[1]['PMC_DOI']
+# 	print('Getting OA details for: + ' + doi)
+# 	response = getdetailsfromhowopenistit(doi)
 
 # Export the data to CSV file
 save_fname = dir_path['output'] + 'Wellcome_APCs_updated.csv'
