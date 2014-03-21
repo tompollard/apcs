@@ -1,8 +1,7 @@
-# Queries Europe PMC for details of articles listed in the Wellcome Trust APC spreadsheet (2013-2014)
+# Queries Europe PMC for details of articles listed in the Wellcome Trust APC spreadsheet (2012-2013)
 # Tom Pollard / 19 March 2014
 
 # Notes: 
-# Attempts to find missing PMCIDs from titles, but fails
 # Should clean up types and remove nans for strings.
 
 import os
@@ -10,6 +9,8 @@ import pandas as pd
 import numpy as np
 from bs4 import BeautifulSoup
 import requests
+import json
+import time
 
 # Set up connection
 session = requests.session()
@@ -31,6 +32,7 @@ apcs = pd.io.excel.read_excel(fname, 'APC')
 apcs = apcs.astype(object)
 
 # add some extra columns to the dataframe 
+apcs['Extracted_date'] = time.strftime('%d/%m/%Y')
 apcs['PMC_Title'] = ''
 apcs['PMC_DOI'] = ''
 apcs['PMC_isOpenAccess'] = ''
@@ -39,6 +41,12 @@ apcs['PMC_Pub_Year'] = ''
 apcs['PMC_Pub_Type'] = ''
 apcs['PMC_Citation_Count'] = ''
 apcs['Notes'] = ''
+apcs['howopen_licensetype'] = ''
+apcs['howopen_isOA'] = ''
+apcs['howopen_BY'] = ''
+apcs['howopen_NC'] = ''
+apcs['howopen_ND'] = ''
+apcs['howopen_SA'] = ''
 
 # get PMCID with PMID
 # what i thought were PMIDs are mostly PMCIDs
@@ -61,23 +69,24 @@ def getpmcidwithpmid(pm_id):
 
 # get PMCID with title
 def getpmcidwithtitle(base_url,art_title):
+	note = 'Unable to match title to PMCID'
 	art_title = art_title.replace('(','').replace(')','').replace(':','').replace('.','')
 	art_title = art_title.strip()
 	art_title = art_title.replace(' ','%20')
-	# query_url = base_url + "'" + art_title + "'"
 	query_url = base_url + art_title
 	r = session.get(query_url)
 	soup = BeautifulSoup(r.content)
-	if soup.hitcount.renderContents() == '1':
+	if soup.find('hitcount') and soup.hitcount.renderContents() == '1':
 		try:
-			pmc_id = soup.record['pmcid']
+			pmc_id = soup.pmcid.renderContents()
+			note = 'Details matched on article title'
 		except (AttributeError,KeyError,TypeError):
 			print('Unable to match title to PMCID')
 			pmc_id = np.nan
 	else:
 		print('Unable to match title to PMCID')
 		pmc_id = np.nan
-	return pmc_id
+	return [pmc_id,note]
 
 # get details using the PMCID
 def getdetailsfrompmc(base_url,apcs,row,pmc_id,pm_id):
@@ -141,11 +150,29 @@ def getdetailsfrompmc(base_url,apcs,row,pmc_id,pm_id):
 		apcs.loc[row[0],'Notes'] = 'PMCID not found'
 	return apcs
 
-# # Get open access details from HowOpenIsIt?
-# def getdetailsfromhowopenistit(doi):
-# 	base_url = 'http://howopenisit.org/developers/api'
-# 	query_url = base_url + '/lookup' + doi
-# 	return response
+# Get open access details from HowOpenIsIt?
+def getdetailsfromhowopenisit(doi):
+	response = {}
+	base_url = 'http://howopenisit.org/lookup/'
+	headers = {'content-type': 'application/json'}
+	search_param = [{'id': doi, 'type': 'doi'}]
+	r = requests.post(base_url,data=json.dumps(search_param),headers=headers)
+	try: 
+		results = r.json()['results'][0]
+		response['type'] = results['license'][0]['type']
+		response['open_access'] = results['license'][0]['open_access']
+		response['BY'] = results['license'][0]['BY']
+		response['NC'] = results['license'][0]['NC']
+		response['ND'] = results['license'][0]['ND']
+		response['SA'] = results['license'][0]['SA']
+	except (AttributeError,KeyError,TypeError,IndexError):
+		response['type'] = np.nan
+		response['open_access'] = np.nan
+		response['BY'] = np.nan
+		response['NC'] = np.nan
+		response['ND'] = np.nan
+		response['SA'] = np.nan
+	return response
 
 # Try to get missing PMCIDs using the PMID
 print('Finding PMCIDs with PMIDs...')
@@ -156,20 +183,19 @@ for row in apcs.loc[(apcs.PMCID.isnull() & apcs.PMID.notnull())].iterrows():
 	[pm_id, pmc_id] = getpmcidwithpmid(pm_id)
 	print('Matched to: ' + str(pmc_id))
 	print('\n')
-	apcs.loc[row[0],'PMID'] = pm_id # strip PMID. it'll be replaced later.
+	apcs.loc[row[0],'PMID'] = pm_id
 	apcs.loc[row[0],'PMCID'] = pmc_id
 
 # Try to get missing PMCIDs using the title (for records missing both PMCID and PMID)
-# Currently fails to find any matches...
 print('Finding PMCIDs with titles...')
 for row in apcs.loc[(apcs.PMCID.isnull() & apcs.PMID.isnull())].iterrows():
 	art_title = row[1]['Title']
 	print('Attempting to match title: ' + art_title)
-	pmc_id = getpmcidwithtitle(base_url,art_title)
+	[pmc_id,note] = getpmcidwithtitle(base_url,art_title)
 	print('Matched to: ' + str(pmc_id))
 	print('\n')
 	apcs.loc[row[0],'PMCID'] = pmc_id
-	apcs.loc[row[0],'Notes'] = 'Warning: details matched on article title'
+	apcs.loc[row[0],'Notes'] = note
 
 # Query Europe PMC using the PMCID
 print('Getting details from Europe PMC...')
@@ -183,12 +209,19 @@ for row in apcs.loc[(apcs.PMCID.notnull() | apcs.PMID.notnull())].iterrows():
 	print(apcs.loc[row[0]])
 	print('\n')
 
-# # How open is it?
-# print('Getting open access details from HowOpenIsIt?...')
-# for row in apcs.loc[(apcs.PMC_DOI.notnull())].iterrows():
-# 	doi = row[1]['PMC_DOI']
-# 	print('Getting OA details for: + ' + doi)
-# 	response = getdetailsfromhowopenistit(doi)
+# How open is it?
+print('Getting open access details from HowOpenIsIt?...')
+apcs['PMC_DOI'] = apcs['PMC_DOI'].replace('',np.nan)
+for row in apcs.loc[apcs.PMC_DOI.notnull()].iterrows():
+	doi = row[1]['PMC_DOI']
+	print('Getting OA details for: ' + doi)
+	response = getdetailsfromhowopenisit(doi)
+	apcs.loc[row[0],'howopen_licensetype'] = response['type']
+	apcs.loc[row[0],'howopen_isOA'] = response['open_access']
+	apcs.loc[row[0],'howopen_BY'] = response['BY']
+	apcs.loc[row[0],'howopen_NC'] = response['NC']
+	apcs.loc[row[0],'howopen_ND'] = response['ND']
+	apcs.loc[row[0],'howopen_SA'] = response['SA']
 
 # Export the data to CSV file
 save_fname = dir_path['output'] + 'Wellcome_APCs_updated.csv'
