@@ -15,18 +15,14 @@ the institution.
 Data Issues
 -----------
 
-The original dataset had inconsistent names for publishers and for journals. This was cleaned up to a 
-certain extent using Open Refine. The data also contain significant errors in the amounts apparently
-charged. Several of the figures for PLOS papers are different to those in our internal accounting system. 
-At the moment these have not been corrected.
+The original dataset had inconsistent names for publishers and for journals. The data also contain significant 
+errors in the amounts apparently charged. Several of the figures for PLOS papers are different to 
+those in the PLOS internal accounting system. At the moment these have not been corrected.
 
-Contributions
+Data and Code
 -------------
 
-The somewhat cleaned dataset is available at wellcome/Wellcome-APCs.tsv in the repository. Further contributions to the
-dataset are welcome via a pull request. Obvious enhancements would be to obtain DOIs for the papers from 
-Crossref search API and then to use that to clean up the bibliographic information. We could also check the
-licenses and/or availability of papers in this dataset.
-
-If you wish to correct financial details please give some information on the provenance of your data. As this
-data is potentially sensitive
+Running 'getarticledetails.py' takes a cleaned version of the dataset in the 'input' folder and attempts to 
+link articles to corresponding information in Europe PubMed Central (http://www.ebi.ac.uk/europepmc/). The output 
+dataset is saved in the 'output' folder as a CSV file. The additional information includes DOIs, citation count, 
+published article title, journal name, and journal ISSN.
