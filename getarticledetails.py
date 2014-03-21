@@ -3,6 +3,7 @@
 
 # Notes: 
 # Should clean up types and remove nans for strings.
+# Getting few matches with call to HowOpenIsIt, so commented out for now.
 
 import os
 import pandas as pd
@@ -41,12 +42,12 @@ apcs['PMC_Pub_Year'] = ''
 apcs['PMC_Pub_Type'] = ''
 apcs['PMC_Citation_Count'] = ''
 apcs['Notes'] = ''
-apcs['howopen_licensetype'] = ''
-apcs['howopen_isOA'] = ''
-apcs['howopen_BY'] = ''
-apcs['howopen_NC'] = ''
-apcs['howopen_ND'] = ''
-apcs['howopen_SA'] = ''
+# apcs['howopen_licensetype'] = ''
+# apcs['howopen_isOA'] = ''
+# apcs['howopen_BY'] = ''
+# apcs['howopen_NC'] = ''
+# apcs['howopen_ND'] = ''
+# apcs['howopen_SA'] = ''
 
 # get PMCID with PMID
 # what i thought were PMIDs are mostly PMCIDs
@@ -209,19 +210,19 @@ for row in apcs.loc[(apcs.PMCID.notnull() | apcs.PMID.notnull())].iterrows():
 	print(apcs.loc[row[0]])
 	print('\n')
 
-# How open is it?
-print('Getting open access details from HowOpenIsIt?...')
-apcs['PMC_DOI'] = apcs['PMC_DOI'].replace('',np.nan)
-for row in apcs.loc[apcs.PMC_DOI.notnull()].iterrows():
-	doi = row[1]['PMC_DOI']
-	print('Getting OA details for: ' + doi)
-	response = getdetailsfromhowopenisit(doi)
-	apcs.loc[row[0],'howopen_licensetype'] = response['type']
-	apcs.loc[row[0],'howopen_isOA'] = response['open_access']
-	apcs.loc[row[0],'howopen_BY'] = response['BY']
-	apcs.loc[row[0],'howopen_NC'] = response['NC']
-	apcs.loc[row[0],'howopen_ND'] = response['ND']
-	apcs.loc[row[0],'howopen_SA'] = response['SA']
+# # How open is it?
+# print('Getting open access details from HowOpenIsIt?...')
+# apcs['PMC_DOI'] = apcs['PMC_DOI'].replace('',np.nan)
+# for row in apcs.loc[apcs.PMC_DOI.notnull()].iterrows():
+# 	doi = row[1]['PMC_DOI']
+# 	print('Getting OA details for: ' + doi)
+# 	response = getdetailsfromhowopenisit(doi)
+# 	apcs.loc[row[0],'howopen_licensetype'] = response['type']
+# 	apcs.loc[row[0],'howopen_isOA'] = response['open_access']
+# 	apcs.loc[row[0],'howopen_BY'] = response['BY']
+# 	apcs.loc[row[0],'howopen_NC'] = response['NC']
+# 	apcs.loc[row[0],'howopen_ND'] = response['ND']
+# 	apcs.loc[row[0],'howopen_SA'] = response['SA']
 
 # Export the data to CSV file
 save_fname = dir_path['output'] + 'Wellcome_APCs_updated.csv'
